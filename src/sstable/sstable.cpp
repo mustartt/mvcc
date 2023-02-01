@@ -18,10 +18,10 @@ int sstable::find_entry_block(const std::string &key) {
     while (left_blk <= right_blk) {
         int mid_idx = left_blk + (right_blk - left_blk) / 2;
         const auto &mid_blk = reader.get(mid_idx);
-        if (mid_blk.first_key().key() <= key) {
-            result = mid_idx;
+        if (mid_blk.first_key().key() < key) {
             left_blk = mid_idx + 1;
         } else {
+            result = mid_idx;
             right_blk = mid_idx - 1;
         }
     }
@@ -37,10 +37,10 @@ int sstable::find_key_in_block(const std::string &key, int blk) {
     while (left <= right) {
         int mid_idx = left + (right - left) / 2;
         const auto &mid_key = block.at(mid_idx).key();
-        if (mid_key <= key) {
-            result = mid_idx;
+        if (mid_key < key) {
             left = mid_idx + 1;
         } else {
+            result = mid_idx;
             right = mid_idx - 1;
         }
     }
@@ -75,6 +75,7 @@ std::string sstable::get_value(uint64_t offset, uint64_t length) {
 
 sstable::iterator sstable::find(const std::string &key) {
     int block_id = find_entry_block(key);
+    // TODO (BUG): Search in the previous block in case first_key < key and key is in the -1 block
     int blk_index = find_key_in_block(key, block_id);
     return {*this, static_cast<int>(reader.get(block_id).size()), block_id, blk_index};
 }

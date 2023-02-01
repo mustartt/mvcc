@@ -5,16 +5,10 @@
 #ifndef MVCC_INCLUDE_SSTABLE_SSTABLE_H_
 #define MVCC_INCLUDE_SSTABLE_SSTABLE_H_
 
+#include "memtable/memtable.h"
 #include "block_reader.h"
 
 namespace mvcc {
-
-struct key_value {
-    std::string key;
-    std::string value;
-    int64_t mvcc;
-    bool is_tombstone;
-};
 
 class sstable {
   public:

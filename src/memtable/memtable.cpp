@@ -11,53 +11,83 @@
 
 namespace mvcc {
 
-std::optional<std::string> memtable::get(const std::string &key, memtable::mvcc_timestamp_t timestamp) {
-    std::shared_lock _(rw_lock);
-    if (timestamp < 0) {
-        // uncommitted transaction
-        if (!insert_table.contains(key)) return std::nullopt;
-        const auto &ins_versions = insert_table[key];
-        if (auto insert_value = ins_versions.find(timestamp); insert_value != ins_versions.end()) {
-            const auto &[latest_uncommitted_timestamp, value] = *insert_value;
-            if (!delete_table.contains(key)) return value;
-            const auto &del_versions = delete_table[key];
-            if (del_versions.contains(latest_uncommitted_timestamp)) {
-                return std::nullopt;
-            }
-            return value;
-        }
-        return std::nullopt;
-    } else {
-        // committed transaction
-        if (!insert_table.contains(key)) return std::nullopt;
-        const auto &ins_versions = insert_table[key];
-        if (auto latest_val = ins_versions.lower_bound(timestamp); latest_val != ins_versions.end()) {
-            const auto &[latest_insert_timestamp, value] = *latest_val;
-            if (!delete_table.contains(key)) return value;
-            const auto &del_versions = delete_table[key];
-            if (auto latest_del = del_versions.lower_bound(timestamp); latest_del != del_versions.end()) {
-                const auto latest_delete_timestamp = *latest_del;
-                if (latest_delete_timestamp >= latest_insert_timestamp) {
-                    return std::nullopt;
-                } else {
-                    return value;
-                }
-            } else {
-                return value;
-            }
-        }
-        return std::nullopt;
-    }
-}
-
 void memtable::put(const std::string &key, memtable::mvcc_timestamp_t timestamp, std::string value) {
     std::unique_lock _(rw_lock);
-    insert_table[key].emplace(timestamp, std::move(value));
+    insert_table[std::make_pair(key, timestamp)] = std::move(value);
 }
 
 void memtable::del(const std::string &key, memtable::mvcc_timestamp_t timestamp) {
     std::unique_lock _(rw_lock);
-    delete_table[key].insert(timestamp);
+    delete_table.insert(std::make_pair(key, timestamp));
+}
+
+memtable::iterator memtable::begin() const {
+    return {insert_table.cbegin(), delete_table.cbegin(),
+            insert_table.cend(), delete_table.cend()};
+}
+
+memtable::iterator memtable::end() const {
+    return {insert_table.cend(), delete_table.cend(),
+            insert_table.cend(), delete_table.cend()};
+}
+
+memtable::iterator memtable::find(const std::string &key) const {
+    key_type existing_key = std::make_pair(key, INT64_MIN);
+    return {insert_table.lower_bound(existing_key),
+            delete_table.lower_bound(existing_key),
+            insert_table.cend(), delete_table.cend()};
+}
+
+memtable::iterator &memtable::iterator::operator++() {
+    if (insert_iter != insert_iter_end && delete_iter != delete_iter_end) {
+        const auto &[left_key, value] = *insert_iter;
+        const auto &right_key = *delete_iter;
+        if (key_comparator()(right_key, left_key)) {
+            ++delete_iter;
+        } else {
+            ++insert_iter;
+        }
+    } else if (insert_iter != insert_iter_end) {
+        ++insert_iter;
+    } else if (delete_iter != delete_iter_end) {
+        ++delete_iter;
+    } else {
+        throw std::runtime_error("memtable::iterator: bad iterator");
+    }
+    return *this;
+}
+
+key_value memtable::iterator::operator*() {
+    if (insert_iter != insert_iter_end && delete_iter != delete_iter_end) {
+        const auto &[left_key, value] = *insert_iter;
+        const auto &right_key = *delete_iter;
+        if (key_comparator()(right_key, left_key)) {
+            return {right_key.first, "",
+                    right_key.second, true};
+        } else {
+            return {left_key.first, value,
+                    left_key.second, false};
+        }
+    } else if (insert_iter != insert_iter_end) {
+        const auto &[left_key, value] = *insert_iter;
+        return {left_key.first, value,
+                left_key.second, false};
+    } else if (delete_iter != delete_iter_end) {
+        const auto &right_key = *delete_iter;
+        return {right_key.first, "",
+                right_key.second, true};
+    } else {
+        throw std::runtime_error("memtable::iterator: bad iterator");
+    }
+}
+
+bool memtable::iterator::operator==(const memtable::iterator &other) const {
+    return insert_iter == other.insert_iter
+        && delete_iter == other.delete_iter;
+}
+
+bool memtable::iterator::operator!=(const memtable::iterator &other) const {
+    return !(*this == other);
 }
 
 } // mvcc

@@ -5,31 +5,75 @@
 #ifndef MVCC_INCLUDE_MEMTABLE_MEMTABLE_H_
 #define MVCC_INCLUDE_MEMTABLE_MEMTABLE_H_
 
-#include <shared_mutex>
 #include <map>
 #include <set>
+#include <shared_mutex>
 #include <optional>
+#include <iterator>
+#include <utility>
 
 namespace mvcc {
+
+struct key_value {
+    std::string key;
+    std::string value;
+    int64_t mvcc;
+    bool is_tombstone;
+};
 
 class memtable {
   public:
     using mvcc_timestamp_t = int64_t;
-    using key_type = std::string;
+    using key_type = std::pair<std::string, mvcc_timestamp_t>;
     using value_type = std::string;
 
+    struct key_comparator {
+        bool operator()(const key_type &a, const key_type &b) const {
+            if (a.first == b.first) {
+                return a.second < b.second;
+            } else {
+                return a.first < b.first;
+            }
+        }
+    };
+
+    using insert_table_t = std::map<key_type, value_type, key_comparator>;
+    using delete_table_t = std::set<key_type, key_comparator>;
+
   public:
-    std::optional<std::string> get(const std::string &key, mvcc_timestamp_t timestamp);
+    class iterator : public std::iterator<std::forward_iterator_tag, key_value> {
+      public:
+        iterator(insert_table_t::const_iterator insert_iter,
+                 delete_table_t::const_iterator delete_iter,
+                 insert_table_t::const_iterator insert_iter_end,
+                 delete_table_t::const_iterator delete_iter_end)
+            : insert_iter(insert_iter), delete_iter(delete_iter),
+              insert_iter_end(insert_iter_end), delete_iter_end(delete_iter_end) {}
+      public:
+        iterator &operator++();
+        key_value operator*();
+        bool operator==(const iterator &other) const;
+        bool operator!=(const iterator &other) const;
+
+      private:
+        insert_table_t::const_iterator insert_iter;
+        delete_table_t::const_iterator delete_iter;
+        insert_table_t::const_iterator insert_iter_end;
+        delete_table_t::const_iterator delete_iter_end;
+    };
+
+  public:
     void put(const std::string &key, mvcc_timestamp_t timestamp, std::string value);
     void del(const std::string &key, mvcc_timestamp_t timestamp);
 
-//    void range(const std::string &start, const std::string &end, mvcc_timestamp_t timestamp);
-  public:
+    [[nodiscard]] iterator begin() const;
+    [[nodiscard]] iterator end() const;
+    [[nodiscard]] iterator find(const std::string &key) const;
 
   private:
     std::shared_mutex rw_lock;
-    std::map<key_type, std::map<mvcc_timestamp_t, value_type, std::greater<>>> insert_table;
-    std::map<key_type, std::set<mvcc_timestamp_t, std::greater<>>> delete_table;
+    insert_table_t insert_table;
+    delete_table_t delete_table;
 };
 
 } // mvcc

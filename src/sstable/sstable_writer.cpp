@@ -4,21 +4,27 @@
 
 #include "sstable/sstable_writer.h"
 
-mvcc::sstable_writer::sstable_writer(const std::string &name, int block_size)
-    : data_file(name + ".data", std::ios::binary | std::ios::out | std::ios::trunc),
+#include <boost/json.hpp>
+
+namespace mvcc {
+
+sstable_writer::sstable_writer(const std::string &name, int block_size, int gen_count)
+    : name(name), generation_count(gen_count),
+      meta_file(name + ".meta.json", std::ios::out | std::ios::trunc),
+      data_file(name + ".data", std::ios::binary | std::ios::out | std::ios::trunc),
       index_file(name + ".index", std::ios::binary | std::ios::out | std::ios::trunc),
       block_size(block_size), block_count(0) {
     buffer.resize(block_size);
 }
 
-mvcc::sstable_writer::~sstable_writer() {
+sstable_writer::~sstable_writer() {
     flush_block();
-    std::cout << "wrote " << block_count << " blocks" << std::endl;
+    write_header();
 }
 
-void mvcc::sstable_writer::write_entry(const std::string &key, int64_t version,
-                                       const std::string &value, bool is_delete) {
-    mvcc::BlockIndex_BlockIndexEntry index_entry;
+void sstable_writer::write_entry(const std::string &key, int64_t version,
+                                 const std::string &value, bool is_delete) {
+    BlockIndex_BlockIndexEntry index_entry;
     index_entry.set_key(key);
     index_entry.set_version(version);
     if (is_delete) {
@@ -39,7 +45,7 @@ void mvcc::sstable_writer::write_entry(const std::string &key, int64_t version,
     new_entry->CopyFrom(index_entry);
 }
 
-void mvcc::sstable_writer::flush_block() {
+void sstable_writer::flush_block() {
     size_t curr_size = current_block.ByteSizeLong();
     ++block_count;
     std::fill(buffer.begin(), buffer.end(), 0);
@@ -53,4 +59,19 @@ void mvcc::sstable_writer::flush_block() {
     index_file.write(buffer.data(), block_size);
 
     current_block.Clear();
+}
+
+void sstable_writer::write_header() {
+    boost::json::object obj;
+    obj["name"] = name;
+    obj["version"] = "0.0.0-dev";
+    obj["data"] = name + ".index";
+    obj["data_file"] = name + ".data";
+    obj["block_count"] = block_count;
+    obj["block_size"] = block_size;
+    obj["generation_count"] = generation_count;
+
+    meta_file << boost::json::serialize(obj) << "\n";
+}
+
 }

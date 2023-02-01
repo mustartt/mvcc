@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(mvcc)
 
-find_package(Boost COMPONENTS filesystem system log timer program_options REQUIRED)
+find_package(Boost 1.80 COMPONENTS filesystem system log json timer program_options REQUIRED)
 find_package(Protobuf REQUIRED)
-
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -22,6 +21,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/types.proto)
 
 add_library(
         sstable
+        ${PROTO_SRCS} ${PROTO_HDRS}
         src/memtable/memtable.cpp
         include/memtable/memtable.h
         src/wal.cpp include/wal.h
@@ -31,9 +31,14 @@ add_library(
         include/sstable/block.h
         src/sstable/block_cache.cpp
         include/sstable/block_cache.h
-        src/sstable/block_reader.cpp include/sstable/block_reader.h src/sstable/sstable.cpp include/sstable/sstable.h)
+        src/sstable/block_reader.cpp
+        include/sstable/block_reader.h
+        src/sstable/sstable.cpp
+        include/sstable/sstable.h
+        src/sstable/memtable_serializer.cpp
+        include/sstable/memtable_serializer.h
+)
 
-add_executable(mvcc main.cpp ${PROTO_SRCS} ${PROTO_HDRS})
+add_executable(mvcc main.cpp)
 
-target_compile_definitions(mvcc PUBLIC BOOST_ASIO_HAS_IO_URING BOOST_ASIO_DISABLE_EPOLL)
-target_link_libraries(mvcc sstable ${Boost_LIBRARIES} uring ${Protobuf_LIBRARIES})
+target_link_libraries(mvcc sstable ${Boost_LIBRARIES} ${Protobuf_LIBRARIES})

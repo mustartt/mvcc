@@ -14,17 +14,21 @@ namespace mvcc {
 
 class sstable_writer {
   public:
-    explicit sstable_writer(const std::string &name, int block_size);
+    explicit sstable_writer(const std::string &name, int block_size, int generation);
     virtual ~sstable_writer();
 
   public:
     void write_entry(const std::string &key, int64_t version,
                      const std::string &value, bool is_delete = false);
-
   private:
+    void write_header();
     void flush_block();
 
   private:
+    std::string name;
+    int generation_count;
+
+    std::ofstream meta_file;
     std::ofstream data_file;
     std::ofstream index_file;
     mvcc::BlockIndex current_block;

@@ -30,6 +30,7 @@ class block {
 
   public:
     explicit block(const void *data, int len = block_size);
+    ~block();
     block(const block &) = delete;
     block(block &&) = default;
     block &operator=(const block &) = delete;

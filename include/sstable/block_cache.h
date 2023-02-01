@@ -51,6 +51,7 @@ class block_lfu_cache {
     bool contains(int key) const noexcept;
     void put(int key, block &&value);
 
+    void report() const;
   private:
     int capacity;
     int size;

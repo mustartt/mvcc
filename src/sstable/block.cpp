@@ -52,6 +52,11 @@ block::block(const void *data, int len) : blk() {
     size_t blk_length;
     input_stream.ReadLittleEndian64(&blk_length);
     blk.ParseFromArray(static_cast<const char *>(data) + sizeof(uint64_t), blk_length);
+//    std::cout << "Block Loaded" << std::endl;
+}
+
+block::~block() {
+//    std::cout << "Block Freed" << std::endl;
 }
 
 } // mvcc

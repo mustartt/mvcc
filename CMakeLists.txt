@@ -31,7 +31,7 @@ add_library(
         include/sstable/block.h
         src/sstable/block_cache.cpp
         include/sstable/block_cache.h
-        src/sstable/block_reader.cpp include/sstable/block_reader.h)
+        src/sstable/block_reader.cpp include/sstable/block_reader.h src/sstable/sstable.cpp include/sstable/sstable.h)
 
 add_executable(mvcc main.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 

@@ -30,7 +30,7 @@ void mvcc::sstable_writer::write_entry(const std::string &key, int64_t version,
         index_entry.set_offset(offset);
         index_entry.set_length(value.size());
 
-        data_file.write(value.data(), static_cast<long>(value.size()));
+        data_file.write(value.data(), static_cast<long>(value.size()) + 1);
     }
     if (8 + index_entry.ByteSizeLong() + current_block.ByteSizeLong() > block_size) {
         flush_block();

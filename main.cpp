@@ -16,31 +16,36 @@
 #include "sstable/sstable_writer.h"
 #include "sstable/block.h"
 #include "sstable/block_reader.h"
+#include "sstable/sstable.h"
 
 int main() {
     using namespace mvcc;
 
-    int blk_size = 4 * 1024;
+    int blk_size = 1024;
+
+    std::vector<std::string> values;
+    for (int i = 0; i < 10000; ++i) {
+        values.emplace_back(std::to_string(i));
+    }
+    std::sort(values.begin(), values.end());
+
     {
         sstable_writer writer("sstable", blk_size);
         boost::timer::auto_cpu_timer t;
 
-        for (int i = 0; i < 100000; ++i) {
-            std::string key = "key:";
-            std::string val = "val:";
-            key.append(std::to_string(i));
-            val.append(std::to_string(i));
-            writer.write_entry(key, i, val);
+        long mvcc = 0;
+        for (const auto &n: values) {
+            writer.write_entry("key:" + n, mvcc, "value:" + n);
+            ++mvcc;
         }
     }
+//    std::random_shuffle(values.begin(), values.end());
     {
-        boost::timer::auto_cpu_timer t;
+        sstable table("sstable", blk_size, 50);
 
-        block_reader reader("sstable", blk_size, 10);
-        for (int i = 0; i < reader.size(); ++i) {
-            auto &blk = reader.get(i);
-            auto entry = blk.first_key();
-            std::cout << entry.key() << std::endl;
+        boost::timer::auto_cpu_timer t;
+        for (auto iter = table.find("key:9990"); iter != table.end(); ++iter) {
+            std::cout << (*iter).key << " - " << (*iter).value << std::endl;
         }
     }
     return 0;

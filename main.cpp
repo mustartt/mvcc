@@ -40,12 +40,15 @@ int main() {
     table.put("key:2", 3, "value:3");
     table.put("key:4", 4, "value:4");
 
-    auto iter = table.find("key:0");
-    auto end = table.end();
+    {
+        auto _ = table.read_lock();
+        auto iter = table.find("key:0");
+        auto end = table.end();
 
-    for (; iter != end; ++iter) {
-        auto kv = *iter;
-        print_kv(kv);
+        for (; iter != end; ++iter) {
+            auto kv = *iter;
+            print_kv(kv);
+        }
     }
 
     return 0;

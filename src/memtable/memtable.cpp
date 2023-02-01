@@ -5,9 +5,6 @@
 #include "memtable/memtable.h"
 
 #include <chrono>
-#include <mutex>
-#include <ranges>
-#include <iostream>
 
 namespace mvcc {
 
@@ -21,21 +18,29 @@ void memtable::del(const std::string &key, memtable::mvcc_timestamp_t timestamp)
     delete_table.insert(std::make_pair(key, timestamp));
 }
 
-memtable::iterator memtable::begin() const {
+memtable::iterator memtable::begin() {
     return {insert_table.cbegin(), delete_table.cbegin(),
             insert_table.cend(), delete_table.cend()};
 }
 
-memtable::iterator memtable::end() const {
+memtable::iterator memtable::end() {
     return {insert_table.cend(), delete_table.cend(),
             insert_table.cend(), delete_table.cend()};
 }
 
-memtable::iterator memtable::find(const std::string &key) const {
+memtable::iterator memtable::find(const std::string &key) {
     key_type existing_key = std::make_pair(key, INT64_MIN);
     return {insert_table.lower_bound(existing_key),
             delete_table.lower_bound(existing_key),
             insert_table.cend(), delete_table.cend()};
+}
+
+std::shared_lock<std::shared_mutex> memtable::read_lock() {
+    return std::shared_lock<std::shared_mutex>(rw_lock);
+}
+
+std::unique_lock<std::shared_mutex> memtable::write_lock() {
+    return std::unique_lock<std::shared_mutex>(rw_lock);
 }
 
 memtable::iterator &memtable::iterator::operator++() {

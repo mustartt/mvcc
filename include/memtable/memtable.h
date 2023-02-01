@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <shared_mutex>
+#include <mutex>
 #include <optional>
 #include <iterator>
 #include <utility>
@@ -49,6 +50,8 @@ class memtable {
                  delete_table_t::const_iterator delete_iter_end)
             : insert_iter(insert_iter), delete_iter(delete_iter),
               insert_iter_end(insert_iter_end), delete_iter_end(delete_iter_end) {}
+
+        friend class memtable;
       public:
         iterator &operator++();
         key_value operator*();
@@ -66,9 +69,12 @@ class memtable {
     void put(const std::string &key, mvcc_timestamp_t timestamp, std::string value);
     void del(const std::string &key, mvcc_timestamp_t timestamp);
 
-    [[nodiscard]] iterator begin() const;
-    [[nodiscard]] iterator end() const;
-    [[nodiscard]] iterator find(const std::string &key) const;
+    [[nodiscard]] iterator begin();
+    [[nodiscard]] iterator end();
+    [[nodiscard]] iterator find(const std::string &key);
+
+    std::shared_lock<std::shared_mutex> read_lock();
+    std::unique_lock<std::shared_mutex> write_lock();
 
   private:
     std::shared_mutex rw_lock;

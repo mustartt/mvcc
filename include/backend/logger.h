@@ -1,0 +1,8 @@
+//
+// Created by henry on 2023-02-07.
+//
+
+#ifndef MVCC_INCLUDE_BACKEND_LOGGER_H_
+#define MVCC_INCLUDE_BACKEND_LOGGER_H_
+
+#endif //MVCC_INCLUDE_BACKEND_LOGGER_H_

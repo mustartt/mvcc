@@ -12,16 +12,15 @@ namespace mvcc {
 
 class memtable_serializer {
   public:
-    memtable_serializer(const std::string &name, int blk_size,
-                        int generation, memtable &table)
-        : table(table), writer(name, blk_size, generation) {}
+    memtable_serializer(sstable_writer &writer, memtable &table)
+        : table(table), writer(writer) {}
 
   public:
     void serialize();
 
   private:
     memtable &table;
-    sstable_writer writer;
+    sstable_writer &writer;
 };
 
 } // mvcc

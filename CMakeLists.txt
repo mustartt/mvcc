@@ -37,8 +37,18 @@ add_library(
         include/sstable/sstable.h
         src/sstable/memtable_serializer.cpp
         include/sstable/memtable_serializer.h
+        src/backend/backend.cpp
+        include/backend/backend.h
+        src/backend/backend_worker.cpp
+        include/backend/backend_worker.h
+        src/sstable/sstable_manager.cpp
+        include/sstable/sstable_manager.h
 )
 
-add_executable(mvcc main.cpp)
+add_compile_definitions(BOOST_LOG_DYN_LINK)
+
+add_executable(mvcc main.cpp include/backend/logger.h)
+
+target_link_libraries(sstable ${Boost_LIBRARIES} ${Protobuf_LIBRARIES})
 
 target_link_libraries(mvcc sstable ${Boost_LIBRARIES} ${Protobuf_LIBRARIES})

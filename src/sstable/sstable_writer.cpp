@@ -5,16 +5,26 @@
 #include "sstable/sstable_writer.h"
 
 #include <boost/json.hpp>
+#include <utility>
 
 namespace mvcc {
 
-sstable_writer::sstable_writer(const std::string &name, int block_size, int gen_count)
-    : name(name), generation_count(gen_count),
-      meta_file(name + ".meta.json", std::ios::out | std::ios::trunc),
-      data_file(name + ".data", std::ios::binary | std::ios::out | std::ios::trunc),
-      index_file(name + ".index", std::ios::binary | std::ios::out | std::ios::trunc),
+sstable_writer::sstable_writer(std::string name,
+                               const boost::filesystem::path &sst_dir,
+                               int block_size, int gen_count, int level)
+    : name(std::move(name)), generation_count(gen_count), level(level),
+      data_file_path(sst_dir), index_file_path(sst_dir), meta_file_path(sst_dir),
       block_size(block_size), block_count(0) {
+
     buffer.resize(block_size);
+
+    meta_file_path.append("sstable.meta.json");
+    data_file_path.append("sstable.data");
+    index_file_path.append("sstable.index");
+
+    meta_file = std::ofstream(meta_file_path.string(), std::ios::out | std::ios::trunc);
+    data_file = std::ofstream(data_file_path.string(), std::ios::binary | std::ios::out | std::ios::trunc);
+    index_file = std::ofstream(index_file_path.string(), std::ios::binary | std::ios::out | std::ios::trunc);
 }
 
 sstable_writer::~sstable_writer() {
@@ -63,13 +73,15 @@ void sstable_writer::flush_block() {
 
 void sstable_writer::write_header() {
     boost::json::object obj;
+
     obj["name"] = name;
     obj["version"] = "0.0.0-dev";
-    obj["data"] = name + ".index";
-    obj["data_file"] = name + ".data";
+    obj["index_file"] = index_file_path.string();
+    obj["data_file"] = data_file_path.string();
     obj["block_count"] = block_count;
     obj["block_size"] = block_size;
     obj["generation_count"] = generation_count;
+    obj["level"] = level;
 
     meta_file << boost::json::serialize(obj) << "\n";
 }

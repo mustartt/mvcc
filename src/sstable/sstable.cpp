@@ -13,7 +13,7 @@ sstable::sstable(const std::string &name, int blk_size, int cache_size)
 int sstable::find_entry_block(const std::string &key) {
     int left_blk = 0;
     int right_blk = reader.size() - 1;
-    int result = 0;
+    int result = reader.size() - 1;
 
     while (left_blk <= right_blk) {
         int mid_idx = left_blk + (right_blk - left_blk) / 2;
@@ -32,7 +32,7 @@ int sstable::find_key_in_block(const std::string &key, int blk) {
     const auto &block = reader.get(blk);
     int left = 0;
     int right = (int)block.size() - 1;
-    int result = 0;
+    int result = -1;
 
     while (left <= right) {
         int mid_idx = left + (right - left) / 2;
@@ -75,8 +75,16 @@ std::string sstable::get_value(uint64_t offset, uint64_t length) {
 
 sstable::iterator sstable::find(const std::string &key) {
     int block_id = find_entry_block(key);
-    // TODO (BUG): Search in the previous block in case first_key < key and key is in the -1 block
     int blk_index = find_key_in_block(key, block_id);
+    if (blk_index == 0 && block_id > 0) {
+        int left_blk_index = find_key_in_block(key, block_id - 1);
+        if (left_blk_index != -1) {
+            return {*this, static_cast<int>(reader.get(block_id - 1).size()),
+                    block_id - 1, left_blk_index};
+        }
+    }
+    if (blk_index == -1)
+        blk_index = (int)reader.get(block_id).size() - 1;
     return {*this, static_cast<int>(reader.get(block_id).size()), block_id, blk_index};
 }
 
@@ -86,7 +94,7 @@ sstable::iterator &sstable::iterator::operator++() {
         ++blk;
         idx = 0;
         if (blk < table.get_block_count())
-            curr_blk_size = table.get_blk(blk).size();
+            curr_blk_size = (int)table.get_blk(blk).size();
     }
     return *this;
 }

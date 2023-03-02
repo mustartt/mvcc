@@ -18,28 +18,16 @@ namespace mvcc {
 struct key_value {
     std::string key;
     std::string value;
-    int64_t mvcc;
     bool is_tombstone;
 };
 
 class memtable {
   public:
-    using mvcc_timestamp_t = int64_t;
-    using key_type = std::pair<std::string, mvcc_timestamp_t>;
+    using key_type = std::string;
     using value_type = std::string;
 
-    struct key_comparator {
-        bool operator()(const key_type &a, const key_type &b) const {
-            if (a.first == b.first) {
-                return a.second < b.second;
-            } else {
-                return a.first < b.first;
-            }
-        }
-    };
-
-    using insert_table_t = std::map<key_type, value_type, key_comparator>;
-    using delete_table_t = std::set<key_type, key_comparator>;
+    using insert_table_t = std::map<key_type, value_type>;
+    using delete_table_t = std::set<key_type>;
 
   public:
     class iterator : public std::iterator<std::forward_iterator_tag, key_value> {
@@ -66,8 +54,8 @@ class memtable {
     };
 
   public:
-    void put(const std::string &key, mvcc_timestamp_t timestamp, std::string value);
-    void del(const std::string &key, mvcc_timestamp_t timestamp);
+    void put(const std::string &key, std::string value);
+    void del(const std::string &key);
     void clear() {    // not thread safe
         insert_table.clear();
         delete_table.clear();

@@ -18,21 +18,21 @@ class wal_writer {
   public:
     using file_handle_t = int;
   public:
-    explicit wal_writer(const std::string &filename);
+    explicit wal_writer(const std::string &filename, uint64_t lsn = 0);
     ~wal_writer() noexcept;
   public:
-    std::unique_lock<std::mutex> write_put_log(const std::string &key, int64_t version, const std::string &value);
-    std::unique_lock<std::mutex> write_del_log(const std::string &key, int64_t version);
+    std::unique_lock<std::mutex> write_put_log(const std::string &key, const std::string &value);
+    std::unique_lock<std::mutex> write_del_log(const std::string &key);
     void write_flush();
+    void flush() const;
 
   private:
-    void flush() const;
-  private:
-    static uint64_t current_timestamp();
+    uint64_t get_and_inc_lsn();
 
   private:
     std::string wal_filename;
     file_handle_t fd;
+    uint64_t lsn;
 
     std::mutex mutex;
     std::vector<char> write_buffer;

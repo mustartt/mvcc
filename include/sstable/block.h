@@ -20,7 +20,6 @@ class block {
         explicit block_entry(const BlockIndex_BlockIndexEntry &entry);
       public:
         [[nodiscard]] const std::string &key() const noexcept;
-        [[nodiscard]] int64_t version() const noexcept;
         [[nodiscard]] uint64_t offset() const noexcept;
         [[nodiscard]] uint64_t length() const noexcept;
         [[nodiscard]] bool is_tombstone() const noexcept;

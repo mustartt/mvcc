@@ -19,7 +19,8 @@
 
 namespace mvcc {
 
-wal_writer::wal_writer(const std::string &filename) : wal_filename(filename) {
+wal_writer::wal_writer(const std::string &filename, uint64_t lsn)
+    : wal_filename(filename), lsn(lsn) {
     fd = open(filename.c_str(), O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
     if (fd < 0) {
         std::cerr << "Error: " << errno << " - " << std::strerror(errno) << std::endl;
@@ -34,19 +35,16 @@ wal_writer::~wal_writer() noexcept {
     }
 }
 
-std::unique_lock<std::mutex> wal_writer::write_put_log(const std::string &key,
-                                                       int64_t mvcc_timestamp,
-                                                       const std::string &value) {
+std::unique_lock<std::mutex> wal_writer::write_put_log(const std::string &key, const std::string &value) {
     std::unique_lock lock(mutex);
     {
         google::protobuf::io::FileOutputStream file_stream(fd);
         google::protobuf::io::CodedOutputStream output_stream(&file_stream);
 
         mvcc::WalEntry log;
-        log.set_timestamp(current_timestamp());
+        log.set_lsn(get_and_inc_lsn());
         log.set_type(mvcc::WalEntry_EntryType_Write);
         log.set_key(key);
-        log.set_mvcc_timestamp(mvcc_timestamp);
         log.set_value(value);
 
         size_t size = log.ByteSizeLong();
@@ -63,17 +61,16 @@ std::unique_lock<std::mutex> wal_writer::write_put_log(const std::string &key,
     return lock;
 }
 
-std::unique_lock<std::mutex> wal_writer::write_del_log(const std::string &key, int64_t mvcc_timestamp) {
+std::unique_lock<std::mutex> wal_writer::write_del_log(const std::string &key) {
     std::unique_lock lock(mutex);
     {
         google::protobuf::io::FileOutputStream file_stream(fd);
         google::protobuf::io::CodedOutputStream output_stream(&file_stream);
 
         mvcc::WalEntry log;
-        log.set_timestamp(current_timestamp());
+        log.set_lsn(get_and_inc_lsn());
         log.set_type(mvcc::WalEntry_EntryType_Delete);
         log.set_key(key);
-        log.set_mvcc_timestamp(mvcc_timestamp);
         log.set_value("");
 
         size_t size = log.ByteSizeLong();
@@ -95,9 +92,8 @@ void wal_writer::write_flush() {
     google::protobuf::io::CodedOutputStream output_stream(&file_stream);
 
     mvcc::WalEntry log;
-    log.set_timestamp(current_timestamp());
+    log.set_lsn(get_and_inc_lsn());
     log.set_type(mvcc::WalEntry_EntryType_Flush);
-    log.set_mvcc_timestamp(0);
 
     size_t size = log.ByteSizeLong();
     write_buffer.resize(size);
@@ -111,9 +107,8 @@ void wal_writer::write_flush() {
     output_stream.WriteRaw(write_buffer.data(), static_cast<int>(size));
 }
 
-uint64_t wal_writer::current_timestamp() {
-    using namespace std::chrono;
-    return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+uint64_t wal_writer::get_and_inc_lsn() {
+    return lsn++;
 }
 
 void wal_writer::flush() const {

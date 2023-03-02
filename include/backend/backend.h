@@ -16,7 +16,7 @@ namespace mvcc {
 
 class backend {
   public:
-    backend(const boost::filesystem::path &database_directory);
+    explicit backend(const boost::filesystem::path &database_directory);
     ~backend();
     backend(const backend &) = delete;
     backend(backend &&) = delete;
@@ -24,8 +24,8 @@ class backend {
     backend &operator=(backend &&) = delete;
 
   public:
-    void write(const std::string &key, int64_t mvcc_timestamp, const std::string &value);
-    void del(const std::string &key, int64_t mvcc_timestamp);
+    void write(const std::string &key, const std::string &value);
+    void del(const std::string &key);
     void flush_memtable();
     void checkpoint();
 

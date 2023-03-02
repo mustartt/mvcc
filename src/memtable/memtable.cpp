@@ -8,14 +8,14 @@
 
 namespace mvcc {
 
-void memtable::put(const std::string &key, memtable::mvcc_timestamp_t timestamp, std::string value) {
+void memtable::put(const std::string &key, std::string value) {
     std::unique_lock _(rw_lock);
-    insert_table[std::make_pair(key, timestamp)] = std::move(value);
+    insert_table[key] = std::move(value);
 }
 
-void memtable::del(const std::string &key, memtable::mvcc_timestamp_t timestamp) {
+void memtable::del(const std::string &key) {
     std::unique_lock _(rw_lock);
-    delete_table.insert(std::make_pair(key, timestamp));
+    delete_table.insert(key);
 }
 
 memtable::iterator memtable::begin() {
@@ -29,9 +29,8 @@ memtable::iterator memtable::end() {
 }
 
 memtable::iterator memtable::find(const std::string &key) {
-    key_type existing_key = std::make_pair(key, INT64_MIN);
-    return {insert_table.lower_bound(existing_key),
-            delete_table.lower_bound(existing_key),
+    return {insert_table.lower_bound(key),
+            delete_table.lower_bound(key),
             insert_table.cend(), delete_table.cend()};
 }
 
@@ -47,7 +46,7 @@ memtable::iterator &memtable::iterator::operator++() {
     if (insert_iter != insert_iter_end && delete_iter != delete_iter_end) {
         const auto &[left_key, value] = *insert_iter;
         const auto &right_key = *delete_iter;
-        if (key_comparator()(right_key, left_key)) {
+        if (right_key < left_key) {
             ++delete_iter;
         } else {
             ++insert_iter;
@@ -66,21 +65,17 @@ key_value memtable::iterator::operator*() {
     if (insert_iter != insert_iter_end && delete_iter != delete_iter_end) {
         const auto &[left_key, value] = *insert_iter;
         const auto &right_key = *delete_iter;
-        if (key_comparator()(right_key, left_key)) {
-            return {right_key.first, "",
-                    right_key.second, true};
+        if (right_key < left_key) {
+            return {right_key, "", true};
         } else {
-            return {left_key.first, value,
-                    left_key.second, false};
+            return {left_key, value, false};
         }
     } else if (insert_iter != insert_iter_end) {
         const auto &[left_key, value] = *insert_iter;
-        return {left_key.first, value,
-                left_key.second, false};
+        return {left_key, value, false};
     } else if (delete_iter != delete_iter_end) {
         const auto &right_key = *delete_iter;
-        return {right_key.first, "",
-                right_key.second, true};
+        return {right_key, "", true};
     } else {
         throw std::runtime_error("memtable::iterator: bad iterator");
     }

@@ -26,8 +26,7 @@ class sstable_writer {
     sstable_writer &operator=(const sstable_writer &) = delete;
 
   public:
-    void write_entry(const std::string &key, int64_t version,
-                     const std::string &value, bool is_delete = false);
+    void write_entry(const std::string &key, const std::string &value, bool is_delete = false);
 
     const boost::filesystem::path &get_index_path() const { return index_file_path; }
     const boost::filesystem::path &get_data_path() const { return data_file_path; }

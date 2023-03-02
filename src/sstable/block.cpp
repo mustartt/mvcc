@@ -13,10 +13,6 @@ const std::string &block::block_entry::key() const noexcept {
     return entry.key();
 }
 
-int64_t block::block_entry::version() const noexcept {
-    return entry.version();
-}
-
 uint64_t block::block_entry::offset() const noexcept {
     return entry.offset();
 }

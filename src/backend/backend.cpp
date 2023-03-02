@@ -24,16 +24,16 @@ backend::~backend() {
     flush_memtable();
 }
 
-void backend::write(const std::string &key, int64_t mvcc_timestamp, const std::string &value) {
-    auto lock = current_checkpoint->write_put_log(key, mvcc_timestamp, value);
-    current_checkpoint->write_flush();
-    mtable.put(key, mvcc_timestamp, value);
+void backend::write(const std::string &key, const std::string &value) {
+    auto lock = current_checkpoint->write_put_log(key, value);
+    current_checkpoint->flush();
+    mtable.put(key, value);
 }
 
-void backend::del(const std::string &key, int64_t mvcc_timestamp) {
-    auto lock = current_checkpoint->write_del_log(key, mvcc_timestamp);
-    current_checkpoint->write_flush();
-    mtable.del(key, mvcc_timestamp);
+void backend::del(const std::string &key) {
+    auto lock = current_checkpoint->write_del_log(key);
+    current_checkpoint->flush();
+    mtable.del(key);
 }
 
 void backend::flush_memtable() {
@@ -43,7 +43,7 @@ void backend::flush_memtable() {
     {
         auto [writer, record] = sst_manager->create_sstable();
         for (const auto kv: mtable) {
-            writer->write_entry(kv.key, kv.mvcc, kv.value, kv.is_tombstone);
+            writer->write_entry(kv.key, kv.value, kv.is_tombstone);
         }
         sst_record_name = std::move(record.name);
     }

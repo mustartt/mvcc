@@ -32,11 +32,9 @@ sstable_writer::~sstable_writer() {
     write_header();
 }
 
-void sstable_writer::write_entry(const std::string &key, int64_t version,
-                                 const std::string &value, bool is_delete) {
+void sstable_writer::write_entry(const std::string &key, const std::string &value, bool is_delete) {
     BlockIndex_BlockIndexEntry index_entry;
     index_entry.set_key(key);
-    index_entry.set_version(version);
     if (is_delete) {
         index_entry.set_is_tombstone(true);
     } else {

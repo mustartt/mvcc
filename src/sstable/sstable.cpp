@@ -106,7 +106,6 @@ key_value sstable::iterator::operator*() {
     return {
         entry.key(),
         table.get_value(entry.offset(), entry.length()),
-        entry.version(),
         entry.is_tombstone()
     };
 }

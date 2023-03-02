@@ -26,13 +26,14 @@ class backend {
   public:
     void write(const std::string &key, const std::string &value);
     void del(const std::string &key);
-    void flush_memtable();
+    void flush_memtable(bool create_next = true);
     void checkpoint();
 
   private:
     int wal_segment_id = 0;
   private:
     std::counting_semaphore<512> client_semaphore{100};
+    boost::filesystem::path database_directory;
 
     std::mutex sstable_mutex;
     std::set<std::string> loaded_sstables;

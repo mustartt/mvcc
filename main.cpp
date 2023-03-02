@@ -19,7 +19,13 @@ int main() {
 
     boost::timer::auto_cpu_timer timer;
 
-    for (int i = 0; i < 10000; ++i) {
+    for (int i = 0; i < 5000; ++i) {
+        db.write(std::to_string(i), std::to_string(i));
+    }
+
+    db.flush_memtable();
+
+    for (int i = 5000; i < 10000; ++i) {
         db.write(std::to_string(i), std::to_string(i));
     }
 

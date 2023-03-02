@@ -7,7 +7,7 @@
 namespace mvcc {
 
 backend::backend(const boost::filesystem::path &database_directory)
-    : wal_segment_id(0) {
+    : wal_segment_id(0), database_directory(database_directory) {
     auto wal_path = database_directory;
     wal_path.append(std::to_string(wal_segment_id) + ".wal");
     current_checkpoint = std::make_unique<wal_writer>(wal_path.string());
@@ -21,7 +21,7 @@ backend::backend(const boost::filesystem::path &database_directory)
 }
 
 backend::~backend() {
-    flush_memtable();
+    flush_memtable(false);
 }
 
 void backend::write(const std::string &key, const std::string &value) {
@@ -36,7 +36,7 @@ void backend::del(const std::string &key) {
     mtable.del(key);
 }
 
-void backend::flush_memtable() {
+void backend::flush_memtable(bool create_next) {
     std::unique_lock<std::mutex> sst_lock(sstable_mutex);
     auto mtable_lock = mtable.write_lock();
     std::string sst_record_name;
@@ -48,7 +48,17 @@ void backend::flush_memtable() {
         sst_record_name = std::move(record.name);
     }
     loaded_sstables.insert(sst_record_name);
+    if (create_next) checkpoint();
+
     mtable.clear();
+}
+
+void backend::checkpoint() {
+    ++wal_segment_id;
+    auto lsn = current_checkpoint->get_lsn();
+    auto wal_path = database_directory;
+    wal_path.append(std::to_string(wal_segment_id) + ".wal");
+    current_checkpoint = std::make_unique<wal_writer>(wal_path.string(), lsn);
 }
 
 } // mvcc

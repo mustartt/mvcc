@@ -26,6 +26,8 @@ class wal_writer {
     void write_flush();
     void flush() const;
 
+    [[nodiscard]] uint64_t get_lsn() const { return lsn; }
+
   private:
     uint64_t get_and_inc_lsn();
 

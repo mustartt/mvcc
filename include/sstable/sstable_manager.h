@@ -7,14 +7,15 @@
 
 #include <string>
 #include <fstream>
-#include <mutex>
+#include <map>
+#include <set>
 
 #include <boost/filesystem.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
-#include <boost/json/src.hpp>
 
 #include "sstable_writer.h"
+#include "sstable.h"
 
 namespace mvcc {
 
@@ -37,24 +38,27 @@ class sstable_manager {
         int level;
     };
   public:
-    sstable_manager(const std::string &sst_dir);
+    explicit sstable_manager(const std::string &sst_dir);
 
     void initialize_directory();
     void discover_existing_sstables();
     void serialize_manager_state();
 
-    sstable_writer create_sstable(int level = 0);
+    [[nodiscard]] std::pair<std::unique_ptr<sstable_writer>, sstable_record> create_sstable(int level = 0);
+    [[nodiscard]] sstable load_sstable(const sstable_record &record);
+    [[nodiscard]] sstable load_sstable(const std::string &table);
+    [[nodiscard]] std::set<std::string> get_loaded();
 
   private:
-    std::mutex mutex;
     boost::uuids::random_generator uuid_gen;
 
-    int default_blk_size = 2048;
+    int default_blk_size = 2 * 1024;
+    int default_cache_size = 4 * 1024 * 1024;
 
     boost::filesystem::path sst_dir;
     int generation_count = 0;
 
-    std::vector<sstable_record> table_records;
+    std::map<int, sstable_record, std::greater<>> table_records;
 };
 
 } // mvcc

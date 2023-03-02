@@ -20,9 +20,10 @@ class sstable_writer {
                             const boost::filesystem::path &sst_dir,
                             int block_size, int generation, int level);
     virtual ~sstable_writer();
-
-    sstable_writer(sstable_writer &&) = default;
-    sstable_writer &operator=(sstable_writer &&) = default;
+    sstable_writer(const sstable_writer &) = delete;
+    sstable_writer(sstable_writer &&) = delete;
+    sstable_writer &operator=(sstable_writer &&) = delete;
+    sstable_writer &operator=(const sstable_writer &) = delete;
 
   public:
     void write_entry(const std::string &key, int64_t version,

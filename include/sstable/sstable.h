@@ -12,7 +12,14 @@ namespace mvcc {
 
 class sstable {
   public:
-    sstable(const std::string &name, int blk_size, int cache_size = 10);
+    sstable(std::string record,
+            const std::string &index_path, const std::string &data_path,
+            int blk_size, int cache_size = 10);
+    sstable(const sstable &) = delete;
+    sstable(sstable &&) = default;
+    sstable &operator=(const sstable &) = delete;
+    sstable &operator=(sstable &&) = default;
+
   public:
     class iterator : public std::iterator<std::forward_iterator_tag, key_value> {
       public:
@@ -48,6 +55,7 @@ class sstable {
     int get_block_count() const;
 
   private:
+    std::string name;
     block_reader reader;
     std::ifstream data_file;
 };

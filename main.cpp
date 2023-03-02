@@ -1,16 +1,8 @@
 #include <iostream>
-#include <thread>
-#include <vector>
-#include <mutex>
-#include <sstream>
 #include <boost/timer/timer.hpp>
-#include <boost/iostreams/stream.hpp>
 
+#include "backend/backend.h"
 #include "memtable/memtable.h"
-#include "wal.h"
-#include "sstable/block_reader.h"
-#include "sstable/memtable_serializer.h"
-#include "sstable/sstable_manager.h"
 
 using namespace mvcc;
 
@@ -22,11 +14,11 @@ void print_kv(const key_value &kv) {
 }
 
 int main() {
-    sstable_manager manager("sstables");
+    backend db("");
 
-    manager.initialize_directory();
-
-//    auto sst = manager.create_sstable(0);
+    for (int i = 0; i < 1000; ++i) {
+        db.write(std::to_string(i), 1, std::to_string(i));
+    }
 
     return 0;
 }

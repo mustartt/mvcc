@@ -9,6 +9,8 @@ namespace mvcc {
 
 class backend_worker {
 
+  private:
+
 };
 
 } // mvcc

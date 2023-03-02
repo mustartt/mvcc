@@ -51,4 +51,4 @@ add_executable(mvcc main.cpp include/backend/logger.h)
 
 target_link_libraries(sstable ${Boost_LIBRARIES} ${Protobuf_LIBRARIES})
 
-target_link_libraries(mvcc sstable ${Boost_LIBRARIES} ${Protobuf_LIBRARIES})
+target_link_libraries(mvcc sstable)

@@ -68,6 +68,10 @@ class memtable {
   public:
     void put(const std::string &key, mvcc_timestamp_t timestamp, std::string value);
     void del(const std::string &key, mvcc_timestamp_t timestamp);
+    void clear() {    // not thread safe
+        insert_table.clear();
+        delete_table.clear();
+    }
 
     [[nodiscard]] iterator begin();
     [[nodiscard]] iterator end();

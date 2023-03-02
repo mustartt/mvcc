@@ -14,9 +14,8 @@ namespace mvcc {
 
 class block_reader {
   public:
-    explicit block_reader(const std::string &name, int blk_size, int cache_size = 10);
-
-  public:
+    explicit block_reader(const std::string &path, int blk_size, int cache_size = 10);
+ public:
     const block& get(int index);
     int size() const;
 

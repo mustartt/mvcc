@@ -34,10 +34,10 @@ wal_writer::~wal_writer() noexcept {
     }
 }
 
-void wal_writer::write_put_log(const std::string &key,
-                               int64_t mvcc_timestamp,
-                               const std::string &value) {
-    std::unique_lock _(mutex);
+std::unique_lock<std::mutex> wal_writer::write_put_log(const std::string &key,
+                                                       int64_t mvcc_timestamp,
+                                                       const std::string &value) {
+    std::unique_lock lock(mutex);
     {
         google::protobuf::io::FileOutputStream file_stream(fd);
         google::protobuf::io::CodedOutputStream output_stream(&file_stream);
@@ -60,11 +60,11 @@ void wal_writer::write_put_log(const std::string &key,
         output_stream.WriteLittleEndian32(result.checksum());
         output_stream.WriteRaw(write_buffer.data(), static_cast<int>(size));
     }
-    flush();
+    return lock;
 }
 
-void wal_writer::write_del_log(const std::string &key, int64_t mvcc_timestamp) {
-    std::unique_lock _(mutex);
+std::unique_lock<std::mutex> wal_writer::write_del_log(const std::string &key, int64_t mvcc_timestamp) {
+    std::unique_lock lock(mutex);
     {
         google::protobuf::io::FileOutputStream file_stream(fd);
         google::protobuf::io::CodedOutputStream output_stream(&file_stream);
@@ -87,32 +87,28 @@ void wal_writer::write_del_log(const std::string &key, int64_t mvcc_timestamp) {
         output_stream.WriteLittleEndian32(result.checksum());
         output_stream.WriteRaw(write_buffer.data(), static_cast<int>(size));
     }
-    flush();
+    return lock;
 }
 
 void wal_writer::write_flush() {
-    std::unique_lock _(mutex);
-    {
-        google::protobuf::io::FileOutputStream file_stream(fd);
-        google::protobuf::io::CodedOutputStream output_stream(&file_stream);
+    google::protobuf::io::FileOutputStream file_stream(fd);
+    google::protobuf::io::CodedOutputStream output_stream(&file_stream);
 
-        mvcc::WalEntry log;
-        log.set_timestamp(current_timestamp());
-        log.set_type(mvcc::WalEntry_EntryType_Flush);
-        log.set_mvcc_timestamp(0);
+    mvcc::WalEntry log;
+    log.set_timestamp(current_timestamp());
+    log.set_type(mvcc::WalEntry_EntryType_Flush);
+    log.set_mvcc_timestamp(0);
 
-        size_t size = log.ByteSizeLong();
-        write_buffer.resize(size);
-        log.SerializeToArray(write_buffer.data(), static_cast<int>(size));
+    size_t size = log.ByteSizeLong();
+    write_buffer.resize(size);
+    log.SerializeToArray(write_buffer.data(), static_cast<int>(size));
 
-        boost::crc_32_type result;
-        result.process_bytes(write_buffer.data(), size);
+    boost::crc_32_type result;
+    result.process_bytes(write_buffer.data(), size);
 
-        output_stream.WriteVarint32(static_cast<int>(size));
-        output_stream.WriteLittleEndian32(result.checksum());
-        output_stream.WriteRaw(write_buffer.data(), static_cast<int>(size));
-    }
-    flush();
+    output_stream.WriteVarint32(static_cast<int>(size));
+    output_stream.WriteLittleEndian32(result.checksum());
+    output_stream.WriteRaw(write_buffer.data(), static_cast<int>(size));
 }
 
 uint64_t wal_writer::current_timestamp() {

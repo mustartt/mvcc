@@ -6,9 +6,11 @@
 
 namespace mvcc {
 
-sstable::sstable(const std::string &name, int blk_size, int cache_size)
-    : reader(name, blk_size, cache_size),
-      data_file(name + ".data", std::ios::binary) {}
+sstable::sstable(std::string name, const std::string &index_path, const std::string &data_path,
+                 int blk_size, int cache_size)
+    : name(std::move(name)),
+      reader(index_path, blk_size, cache_size),
+      data_file(data_path, std::ios::binary) {}
 
 int sstable::find_entry_block(const std::string &key) {
     int left_blk = 0;

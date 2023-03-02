@@ -21,8 +21,8 @@ class wal_writer {
     explicit wal_writer(const std::string &filename);
     ~wal_writer() noexcept;
   public:
-    void write_put_log(const std::string &key, int64_t version, const std::string &value);
-    void write_del_log(const std::string &key, int64_t version);
+    std::unique_lock<std::mutex> write_put_log(const std::string &key, int64_t version, const std::string &value);
+    std::unique_lock<std::mutex> write_del_log(const std::string &key, int64_t version);
     void write_flush();
 
   private:

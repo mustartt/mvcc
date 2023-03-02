@@ -6,9 +6,9 @@
 
 namespace mvcc {
 
-block_reader::block_reader(const std::string &name, int blk_size, int cache_size)
+block_reader::block_reader(const std::string &path, int blk_size, int cache_size)
     : cache(cache_size),
-      index_file(name + ".index", std::ios::binary | std::ios::ate),
+      index_file(path, std::ios::binary | std::ios::ate),
       block_size(blk_size) {
     if (index_file.tellg() % blk_size != 0)
         throw std::runtime_error("block reader: index not block aligned");
